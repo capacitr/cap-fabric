@@ -8,10 +8,10 @@ def manage(command, quiet=False):
     sudo("%s/python manage.py %s" % (env.path, command,), quiet=quiet)
 
 def restart():
-    sudo("supervisorctl restart %s" % project_name)
+    sudo("supervisorctl restart %s" % env.project_name)
 
 def stop():
-    sudo("supervisorctl stop %s" % project_name)
+    sudo("supervisorctl stop %s" % env.project_name)
 
 def collectstatic():
     manage("collectstatic --noinput")
@@ -62,8 +62,8 @@ def deploy():
     print(green("Collecting static files..."))
     manage("collectstatic --noinput", quiet=True)
 
-    print(green("Restarting %s." % project_name))
-    sudo("supervisorctl restart %s" % project_name, quiet=True)
+    print(green("Restarting %s." % env.project_name))
+    sudo("supervisorctl restart %s" % env.project_name, quiet=True)
 
 def run_tests(opts=None):
     manage("test %s" % opts)
