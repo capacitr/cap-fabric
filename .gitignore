@@ -1,0 +1,15 @@
+*.swp
+*.swo
+*.orig
+*.swa
+*.pyc
+*.pyo
+.DS_Store
+uploads/
+*.log
+*.pid
+*.rdb 
+recipes/
+sql/
+pdf/
+drdayan.com/
