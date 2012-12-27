@@ -4,8 +4,8 @@ from fabric.colors import green
 def anonymous():
     sudo("uname -a")
 
-def manage(command):
-    sudo("%s/python manage.py %s" % (env.path, command,))
+def manage(command, quiet=False):
+    sudo("%s/python manage.py %s" % (env.path, command,), quiet=quiet)
 
 def restart():
     sudo("supervisorctl restart %s" % project_name)
