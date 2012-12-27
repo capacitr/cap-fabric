@@ -1,4 +1,5 @@
 from fabric.api import settings, run, sudo, env, prefix
+from fabric.colors import green
 
 def anonymous():
     sudo("uname -a")
