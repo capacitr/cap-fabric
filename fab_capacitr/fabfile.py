@@ -59,12 +59,13 @@ def deploy():
     print(green("Migrating the database..."))
     manage("migrate", quiet=True)
 
-    print(green("Collecting static files..."))
-    manage("collectstatic --noinput", quiet=True)
+    print(green("Compressing static files..."))
+    manage("compress", quiet=True)
 
-    print(green("Restarting %s." % env.project_name))
+    print(green("Collecting static files..."))
+    manage("collectstatic -i css,js --noinput", quiet=True)
+print(green("Restarting %s." % env.project_name))
     sudo("supervisorctl restart %s" % env.project_name, quiet=True)
 
 def run_tests(opts=None):
     manage("test %s" % opts)
-
