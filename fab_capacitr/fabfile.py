@@ -1,4 +1,4 @@
-from fabric.api import settings, run, sudo, env, prefix
+from fabric.api import settings, run, sudo, env, prefix, cd
 from fabric.colors import green
 
 def anonymous():
@@ -72,5 +72,9 @@ def run_tests(opts=None):
     manage("test %s" % opts)
 
 def deb(version=""):
-    sudo("fpm -s dir -t deb -n '{0}' -v {1} /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
+    with cd("/builds"):
+        sudo("fpm -s dir -t deb -n '{0}' -v {1} " \
+            "--before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst" \
+            " /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
+
 
