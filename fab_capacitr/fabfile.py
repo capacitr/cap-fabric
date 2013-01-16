@@ -1,5 +1,5 @@
 from fabric.api import settings, run, sudo, env, prefix, cd
-from fabric.colors import green
+from fabric.colors import green, magenta 
 
 def anonymous():
     sudo("uname -a")
@@ -52,6 +52,12 @@ def loaddata(fixture):
 def compress():
     manage("compress --force")
 
+def deb(version=""):
+    with cd("/builds"):
+        sudo("fpm -s dir -t deb -n '{0}' -v {1} " \
+            "--before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst" \
+            " /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
+
 def deploy():
     print(green("Syncing the database..."))
     manage("syncdb", quiet=True)
@@ -68,13 +74,24 @@ def deploy():
     print(green("Restarting %s." % env.project_name))
     sudo("supervisorctl restart %s" % env.project_name, quiet=True)
 
+
+def deploy_new(version=""):
+    print(green("Compressing static files..."))
+    manage("compress", quiet=True)
+
+    print(green("Collecting static files..."))
+    manage("collectstatic -i css,js --noinput", quiet=True)
+
+    print(magenta("Creating deb package..."))
+    deb(version=version)
+
+    print(green("Pushing deb file"))
+    #scp file to server
+
+    print(green("Installing.."))
+    sudo("dpkg -i /builds/{0}".format(package_name))
+
+
 def run_tests(opts=None):
     manage("test %s" % opts)
-
-def deb(version=""):
-    with cd("/builds"):
-        sudo("fpm -s dir -t deb -n '{0}' -v {1} " \
-            "--before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst" \
-            " /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
-
 
