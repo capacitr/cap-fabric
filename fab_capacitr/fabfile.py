@@ -64,8 +64,13 @@ def deploy():
 
     print(green("Collecting static files..."))
     manage("collectstatic -i css,js --noinput", quiet=True)
-print(green("Restarting %s." % env.project_name))
+
+    print(green("Restarting %s." % env.project_name))
     sudo("supervisorctl restart %s" % env.project_name, quiet=True)
 
 def run_tests(opts=None):
     manage("test %s" % opts)
+
+def deb(version=""):
+    sudo("fpm -s dir -t deb -n '{0}' -v {1} /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
+
