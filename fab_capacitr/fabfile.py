@@ -1,14 +1,16 @@
 from fabric.api import settings, run, sudo, env, prefix, cd
+from fabric.operations import put
+
 from fabric.colors import green, magenta 
 
 def vagrant(command):
-    local("vagrant {0}".format(command))
+    local("vagrant ssh -c \"sudo {0}\"".format(command))
 
 def anonymous():
     sudo("uname -a")
 
 def manage(command, quiet=False):
-    sudo("%s/python manage.py %s" % (env.path, command,), quiet=quiet)
+    vagrant("{0}/python {1}/manage.py {2}".format(env.path, env.cwd, command), quiet=quiet)
 
 def restart():
     sudo("supervisorctl restart %s" % env.project_name)
@@ -52,49 +54,31 @@ def dumpdata(what, where, fmt):
 def loaddata(fixture):
     manage("loaddata %s" % fixture)
 
-def compress():
-    manage("compress --force")
 
 def deb(version=""):
     with cd("/builds"):
-        sudo("fpm -s dir -t deb -n '{0}' -v {1} " \
+        vagrant("fpm -s dir -t deb -n '{0}' -v {1} " \
+            "-x \"*.git\" -x \"*.pyc\" -x \"*.orig\"" \
             "--before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst" \
             " /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
 
-def deploy():
-    print(green("Syncing the database..."))
-    manage("syncdb", quiet=True)
-
-    print(green("Migrating the database..."))
-    manage("migrate", quiet=True)
-
-    print(green("Compressing static files..."))
+def prepare(version=""):
+    print(green("Compressing static files for %s" % env.project_name))
     manage("compress", quiet=True)
 
-    print(green("Collecting static files..."))
+    print(green("Collecting static files for %s" % env.project_name))
     manage("collectstatic -i css,js --noinput", quiet=True)
 
-    print(green("Restarting %s." % env.project_name))
-    sudo("supervisorctl restart %s" % env.project_name, quiet=True)
-
-
-def deploy_new(version=""):
-    print(green("Compressing static files..."))
-    manage("compress", quiet=True)
-
-    print(green("Collecting static files..."))
-    manage("collectstatic -i css,js --noinput", quiet=True)
-
-    print(magenta("Creating deb package..."))
+    print(green("Creating installable package for %s" % env.project_name))
     deb(version=version)
 
-    print(green("Pushing deb file"))
-    #scp file to server
+def deploy(upload=True):
+    if upload:
+        print(green("Uploading %s" % env.project_name))
+        put("~/builds/{0}".format(package_name), "/builds")
 
-    print(green("Installing.."))
+    print(green("Installing %s" % env.project_name))
     sudo("dpkg -i /builds/{0}".format(package_name))
 
-
-def run_tests(opts=None):
-    manage("test %s" % opts)
+    print(green("%s is installed." % env.project_name))
 
