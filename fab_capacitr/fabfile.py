@@ -1,6 +1,9 @@
 from fabric.api import settings, run, sudo, env, prefix, cd
 from fabric.colors import green, magenta 
 
+def vagrant(command):
+    local("vagrant {0}".format(command))
+
 def anonymous():
     sudo("uname -a")
 
