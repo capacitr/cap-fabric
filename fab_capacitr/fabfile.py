@@ -27,6 +27,7 @@ def compile(version=""):
     print(green("Creating installable package for %s" % env.project_name))
     deb(version=version)
 
+
 def deploy(upload=True):
     if upload:
         print(green("Uploading %s" % env.project_name))
