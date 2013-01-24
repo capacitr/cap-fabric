@@ -1,43 +1,49 @@
-from fabric.api import settings, run, sudo, env, prefix, cd, local
+from fabric.api import settings, run, sudo, env, prefix, cd, hide, local
 from fabric.operations import put
 
 from fabric.colors import green, magenta 
 
-def vagrant(command):
-    local("vagrant ssh -c \"sudo {0}\"".format(command))
+def vagrant():
+    # change from the default user to 'vagrant'
+    env.user = 'vagrant'
+    # connect to the port-forwarded ssh
+    env.hosts = ['127.0.0.1:2222']
+ 
+    # use vagrant ssh key
+    with hide('running', 'stdout'):
+        result = local('vagrant ssh-config | grep IdentityFile', capture=True)
+        env.key_filename = result.split()[1]
+
+def uname():
+    run('uname -a')
 
 def manage(command):
-    vagrant("{0}/python {1}/manage.py {2}".format(env.path, env.cwd, command))
-
+    sudo("/home/{0}/venv/bin/python /home/{0}/site/manage.py {1}".format(env.project_name, command))
 
 def deb(version=""):
     with cd("/builds"):
-        vagrant("fpm -s dir -t deb -n '{0}' -v {1} " \
-            "-x \"*.git\" -x \"*.pyc\" -x \"*.orig\"" \
-            "--before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst" \
-            " /home/beavers/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
+        sudo("fpm -s dir -t deb -n \"{0}\" -v {1} -x \"*.git\" -x \"*.pyc\" -x \"*.orig\" --before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst /home/{0}/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
 
-def compile(version=""):
+def compile(version):
     print(green("Compressing static files for %s" % env.project_name))
-    manage("compress")
+    with hide('running', 'stdout'):
+        output = manage("compress --force")
 
     print(green("Collecting static files for %s" % env.project_name))
-    manage("collectstatic -i css,js --noinput")
+    with hide('running', 'stdout'):
+        output = manage("collectstatic -i css,js --noinput")
 
     print(green("Creating installable package for %s" % env.project_name))
-    deb(version=version)
+    output = deb(version=version)
 
-
-def deploy(upload=True):
-    if upload:
-        print(green("Uploading %s" % env.project_name))
-        put("~/builds/{0}".format(package_name), "/builds")
+def deploy(package_name=True):
+    print(green("Uploading %s" % env.project_name))
+    put("~/projects/builds/{0}".format(package_name), "/builds")
 
     print(green("Installing %s" % env.project_name))
     sudo("dpkg -i /builds/{0}".format(package_name))
 
     print(green("%s is installed." % env.project_name))
-
 
 
 ###########
@@ -71,16 +77,12 @@ def schemaupdate(app):
 def initial(app):
     manage("schemamigration %s --initial" % app)
 
-def run_script(command=""):
-    sudo("%s/python sc.py %s" % (env.path, command,))
-
 def pip_install(package=""):
-    sudo("%s/pip install %s" % (env.path, package,))
+    sudo("/home/{0}/venv/bin/pip install {1}".format(env.project_name, package,))
 
 def dumpdata(what, where, fmt):
-    manage("dumpdata %s --format=%s > %s" % (what, where, fmt))
+    manage("dumpdata {0} --format={2} > {1}".format(what, where, fmt))
 
 def loaddata(fixture):
     manage("loaddata %s" % fixture)
-
 
