@@ -24,11 +24,12 @@ def deb(version=""):
     with cd("/builds"):
         sudo("fpm -s dir -t deb -n \"{0}\" -v {1} -x \"*.git\" -x \"*.pyc\" -x \"*.orig\" --before-install /home/{0}/site/install/preinst --after-install /home/{0}/site/install/postinst /home/{0}/site/ /home/{0}/venv/ /home/{0}/static/".format(env.project_name, version))
 
-def compile(version):
+def compress():
     print(green("Compressing static files for %s" % env.project_name))
     with hide('running', 'stdout'):
         output = manage("compress --force")
 
+def compile(version):
     print(green("Collecting static files for %s" % env.project_name))
     with hide('running', 'stdout'):
         output = manage("collectstatic -i css,js --noinput")
@@ -36,12 +37,23 @@ def compile(version):
     print(green("Creating installable package for %s" % env.project_name))
     output = deb(version=version)
 
-def deploy(package_name=True):
-    print(green("Uploading %s" % env.project_name))
-    put("~/projects/builds/{0}".format(package_name), "/builds")
+def deploy(package_name):
+    print(green("Checking if %s already exists." % package_name))
+    res = sudo("ls /builds/{0}".format(package_name))
+    if package_name in res:
+        magenta("Package %s already exists on server" % package_name)
+    else:
+        print(green("Uploading %s" % env.project_name))
+        put("~/projects/builds/{0}".format(package_name), "/builds")
+
+    print(green("Stopping %s" % env.project_name))
+    sudo("supervisorctl stop %s" % env.project_name)
 
     print(green("Installing %s" % env.project_name))
     sudo("dpkg -i /builds/{0}".format(package_name))
+
+    print(green("Stopping %s" % env.project_name))
+    sudo("supervisorctl start %s" % env.project_name)
 
     print(green("%s is installed." % env.project_name))
 
