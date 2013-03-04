@@ -1,7 +1,8 @@
-from fabric.api import settings, run, sudo, env, prefix, cd, hide, local
-from fabric.operations import put
+from fabric.api import settings, run, sudo, env, prefix, cd, lcd, hide, local
+from fabric.operations import put, prompt
 
 from fabric.colors import green, magenta 
+import requests
 
 def vagrant():
     # change from the default user to 'vagrant'
@@ -37,26 +38,15 @@ def compile(version):
     print(green("Creating installable package for %s" % env.project_name))
     output = deb(version=version)
 
+def upload(package_name):
+    print(green("Uploading %s" % env.project_name))
+    put("~/projects/builds/{0}".format(package_name), "/builds")
+
 def deploy(package_name):
-    print(green("Checking if %s already exists." % package_name))
-    res = sudo("ls /builds/{0}".format(package_name))
-    if package_name in res:
-        magenta("Package %s already exists on server" % package_name)
-    else:
-        print(green("Uploading %s" % env.project_name))
-        put("~/projects/builds/{0}".format(package_name), "/builds")
-
-    print(green("Stopping %s" % env.project_name))
-    sudo("supervisorctl stop %s" % env.project_name)
-
     print(green("Installing %s" % env.project_name))
     sudo("dpkg -i /builds/{0}".format(package_name))
 
-    print(green("Stopping %s" % env.project_name))
-    sudo("supervisorctl start %s" % env.project_name)
-
     print(green("%s is installed." % env.project_name))
-
 
 ###########
 def restart():
@@ -97,4 +87,34 @@ def dumpdata(what, where, fmt):
 
 def loaddata(fixture):
     manage("loaddata %s" % fixture)
+
+def npm(package=""):
+    with cd("/home/{0}/site".format(env.project_name)):
+        sudo("npm install %s" % package)
+
+
+def create_project():
+    name = prompt("What is the project name?")
+    service = prompt("Where do you want the code of this project?")
+    key_name = prompt("What is the key name?")
+    username = prompt("What is the username?")
+
+    local("mkdir -p {0}".format(name))
+    with lcd(name):
+        local("git flow init -d")
+        local("echo \"# This is my README\" >> README.md")
+        local("git add .")
+        local("git commit -am \"initial commit\"")
+        params = {"name" : name}
+        user = prompt("What is the username?")
+        password = prompt("What is your password?")
+        if service == "bitbucket":
+            r = requests.post("https://api.bitbucket.org/1.0/repositories", auth=(user,password), data=params)
+            print r.text
+            local("git remote add origin git@{1}:{2}/{0}.git".format(name, key_name, username), capture=True)
+        elif service == "github":
+            r = requests.post("https://api.github.com/users/repos",auth=(user,password), data=params)
+            print r.text
+            local("git remote add origin git@{1}:{2}/{0}.git".format(name, key_name, username), capture=True)
+        local("git push -u origin master")
 
