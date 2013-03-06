@@ -79,6 +79,10 @@ def schemaupdate(app):
 def initial(app):
     manage("schemamigration %s --initial" % app)
 
+def pip_requirements():
+    with cd("/home/{0}/site".format(env.project_name)):
+        run("source /home/{0}/venv/bin/activate && pip install -r requirements.txt".format(env.project_name))
+
 def pip_install(package=""):
     sudo("/home/{0}/venv/bin/pip install {1}".format(env.project_name, package,))
 
